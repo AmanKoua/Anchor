@@ -1,6 +1,6 @@
 /*
 Data.txt path : "C:\Personal Use\Programming\Anchor\src\data.txt"
-Test file path : c
+Test file path : "C:\Personal Use\Programming\Anchor test files\WheelDeal\Transaction\TransactionController.java"
 */
 
 import java.io.IOException;
@@ -111,23 +111,62 @@ public class Anchor {
 
     }
 
-    public static int writeDataToFile(String dataPath){
+    private static int getNewlineCount(String data){
+
+        int count = 0;
+
+        for(int i = 0; i < data.length(); i++){
+            if(data.charAt(i) == '\n'){
+                count++;
+            }
+        }
+
+        return count;
+
+    }
+
+    public static int writeDataToFile(String dataPath, String metaPath){
 
 //        String outputFilePath = "C:\\Personal Use\\Programming\\Anchor\\src\\data.txt";
-        FileWriter fileWriter;
-        BufferedWriter bufferedWriter;
+        FileWriter dataFileWriter;
+        FileWriter metaFileWriter;
+        BufferedWriter dataBufferedWriter;
+        BufferedWriter metaBufferedWriter;
+        int lineCount = 0;
 
         try{
-            fileWriter = new FileWriter(dataPath, true);
-            bufferedWriter = new BufferedWriter(fileWriter);
+            dataFileWriter = new FileWriter(dataPath, true);
+            dataBufferedWriter = new BufferedWriter(dataFileWriter);
+            metaFileWriter = new FileWriter(metaPath, true);
+            metaBufferedWriter = new BufferedWriter(metaFileWriter);
+        }catch(IOException e){
+            System.out.println("Failed initializing data / metadata files!");
+            System.out.println(e);
+            return -1;
+        }
+
+        try{
 
             for (Map.Entry<String, String> entry : anchorTagComments.entrySet()) {
-                bufferedWriter.write(entry.getKey());
-                bufferedWriter.newLine();
-                bufferedWriter.write(entry.getValue());
+
+                // write metadata for efficient data traversal upon reading comments
+                metaBufferedWriter.write(entry.getKey());
+                metaBufferedWriter.write(":");
+                metaBufferedWriter.write(String.valueOf(lineCount + 1));
+                metaBufferedWriter.write("-");
+                metaBufferedWriter.write(String.valueOf(getNewlineCount(entry.getValue()) + (lineCount + 2)));
+                metaBufferedWriter.newLine();
+
+                lineCount = getNewlineCount(entry.getValue()) + (lineCount + 1);
+
+                // Write data to data file
+                dataBufferedWriter.write(entry.getKey());
+                dataBufferedWriter.newLine();
+                dataBufferedWriter.write(entry.getValue());
             }
 
-            bufferedWriter.close();
+            dataBufferedWriter.close();
+            metaBufferedWriter.close();
 
         }catch(Exception e){
             System.out.println(e);
@@ -247,7 +286,7 @@ public class Anchor {
 
             getAnchorData(args[1]);
 
-            if(writeDataToFile(dataPathString) == -1){
+            if(writeDataToFile(dataPathString, metaPathString) == -1){
                 System.out.println("Failed writing data to file!");
                 return;
             }
