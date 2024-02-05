@@ -27,9 +27,6 @@ public class Anchor {
 
         try{
             fileLines = Files.readAllLines(Paths.get(filePath));
-//            fileLines.add("big lmao new line added here!");
-//            fileLines.set(0, "Haha, this line has been set differenltly!");
-//            Files.write(Paths.get(filePath), lines);
         }catch (Exception e){
             System.out.println(e);
             return -1; // failure
@@ -98,10 +95,6 @@ public class Anchor {
 
         }
 
-//        for (Map.Entry<String, String> entry : anchorTagComments.entrySet()) {
-//            System.out.println("Key: " + entry.getKey() + ", Value: " + entry.getValue());
-//        }
-
         try {
             Files.write(Paths.get(filePath), fileLines);
         } catch (IOException e) {
@@ -127,7 +120,6 @@ public class Anchor {
 
     public static int writeDataToFile(String dataPath, String metaPath){
 
-//        String outputFilePath = "C:\\Personal Use\\Programming\\Anchor\\src\\data.txt";
         FileWriter dataFileWriter;
         FileWriter metaFileWriter;
         BufferedWriter dataBufferedWriter;
