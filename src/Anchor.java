@@ -3,12 +3,10 @@ Data.txt path : "C:\Personal Use\Programming\Anchor\src\data.txt"
 Test file path : "C:\Personal Use\Programming\Anchor test files\WheelDeal\Transaction\TransactionController.java"
 */
 
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.io.BufferedWriter;
-import java.io.FileWriter;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -23,6 +21,7 @@ public class Anchor {
     private static HashMap<String, String> anchorTagComments;
     private static String anchorDirPath = "";
 
+    // Reads all file content, from specified filePath, into fileLines list
     private static int getFileContent(String filePath){
 
         try{
@@ -44,8 +43,7 @@ public class Anchor {
                 {Comment Data}
             +/
 
-        This method will get anchor data AND remove comment data!
-        Needs to be refactored eventually.
+        This method will get anchor data AND remove comment data from source code file!
 
      */
     private static void getAnchorData(String filePath){
@@ -104,6 +102,7 @@ public class Anchor {
 
     }
 
+    // get number of newline characters in a string
     private static int getNewlineCount(String data){
 
         int count = 0;
@@ -118,6 +117,7 @@ public class Anchor {
 
     }
 
+    // write comment data, and generated metadata, to file
     public static int writeDataToFile(String dataPath, String metaPath){
 
         FileWriter dataFileWriter;
@@ -169,6 +169,87 @@ public class Anchor {
 
     }
 
+    private static int readStoredData(String commentId, String dataPath, String metaPath){
+
+        BufferedReader metaReader = null;
+        BufferedReader dataReader = null;
+        String temp;
+        String commentData = "";
+        String fullCommentId = "[Anchor." + commentId + "]";
+        String metaDataLine = ""; // init
+        String commentDataLine = ""; // init
+        String[] dataBounds;
+        boolean isCommentIdInMetadata = false;
+        int lineCount = 0;
+
+//        System.out.println("full comment id: " + fullCommentId);
+
+        try{
+            metaReader = new BufferedReader(new FileReader(metaPath));
+            dataReader = new BufferedReader(new FileReader(dataPath));
+        } catch(Exception e){
+            System.out.println("Failed to open metadata / data files for reading!");
+        }
+
+
+        while(metaDataLine != null){
+            
+            if(metaDataLine.contains(fullCommentId)){
+                isCommentIdInMetadata = true;
+                break;
+            }
+
+            try{
+                metaDataLine = metaReader.readLine();
+            }
+            catch(Exception e){
+                System.out.println(e);
+            }
+
+        }
+
+        if(!isCommentIdInMetadata){
+            System.out.println("Comment ID was not found!");
+            return 1;
+        }
+
+        temp = metaDataLine.substring(metaDataLine.indexOf(":") + 1);
+        dataBounds = temp.split("-");
+
+        if(dataBounds.length != 2){
+            System.out.println("More or less than 2 data bounds when parsing metadata file!");
+            return 1;
+        }
+
+        System.out.println();
+
+        while(commentDataLine != null){
+
+            if(lineCount >= Integer.parseInt(dataBounds[1].trim())){
+                break;
+            }
+
+            if(lineCount > Integer.parseInt(dataBounds[0].trim())){
+                commentData += commentDataLine + "\n";
+            }
+
+            try{
+                commentDataLine = dataReader.readLine();
+            }
+            catch(Exception e){
+                System.out.println(e);
+            }
+
+            lineCount++;
+
+        }
+
+        System.out.println(commentData);
+        System.out.println();
+
+        return 1;
+    }
+
     public static Set<String> getDirsInCurrentDir(String dir) throws IOException {
         try (Stream<Path> stream = Files.list(Paths.get(dir))) {
             return stream
@@ -188,6 +269,7 @@ public class Anchor {
         return false;
     }
 
+    // Parses command arg and returns corresponding enum value
     public static Command parseCommand(String command){
         switch(command.toLowerCase()){
             case "init":
@@ -221,10 +303,15 @@ public class Anchor {
         String initDirPathString = currentDir + "\\.anchor";
         Path initDirPath = Paths.get(initDirPathString);
 
-        if(command != Command.SAVE && args.length > 1){ // only save command will take a path (for now)
-            System.out.println("Too many arguments for provided command!");
-            return;
-        }
+        // TODO : implement command arg limiting!
+//        if((command == Command.SAVE && args.length > 1)){ // only save command will take a path (for now)
+//            System.out.println("Too many arguments for provided command!");
+//            return;
+//        }
+//        else if((command == Command.READ && args.length > 2)){
+//            System.out.println("Too many arguments for provided command!");
+//            return;
+//        }
 
         // Placeholder method of handling commands.
         if(command == Command.HELP){
@@ -268,9 +355,7 @@ public class Anchor {
             }
 
             String metaPathString = initDirPathString + "\\metadata.txt";
-            Path metaPathDir = Paths.get(metaPathString);
             String dataPathString = initDirPathString + "\\data.txt";
-            Path dataPathDir = Paths.get(initDirPathString);
 
             if(getFileContent(args[1]) != 1){ // 2nd command line arg MUST be a path (for now)
                 return;
@@ -284,6 +369,24 @@ public class Anchor {
             }
 
             System.out.println("Successfully saved comments!");
+
+        }
+        else if (command == Command.READ){
+
+            try {
+                dirs = getDirsInCurrentDir(currentDir);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+
+            if(!isRootDirInitialized(dirs)){
+                System.out.println("This directory is not initialized! Initialize this directory with the command \"anchor init\" ");
+                return;
+            }
+
+            String metaPathString = initDirPathString + "\\metadata.txt";
+            String dataPathString = initDirPathString + "\\data.txt";
+            readStoredData(args[1], dataPathString, metaPathString);
 
         }
 
