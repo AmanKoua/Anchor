@@ -7,6 +7,7 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.sql.SQLOutput;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -23,6 +24,13 @@ public class Anchor {
 
     // Reads all file content, from specified filePath, into fileLines list
     private static int getFileContent(String filePath){
+
+        File file = new File(filePath);
+
+        if(!file.exists()){
+            System.out.println("Provided file path does not exist!");
+            return -1;
+        }
 
         try{
             fileLines = Files.readAllLines(Paths.get(filePath));
@@ -159,6 +167,9 @@ public class Anchor {
 
             dataBufferedWriter.close();
             metaBufferedWriter.close();
+            // Next 2 lines need to be tested for functionality!
+            dataFileWriter.close();
+            metaFileWriter.close();
 
         }catch(Exception e){
             System.out.println(e);
@@ -170,6 +181,14 @@ public class Anchor {
     }
 
     private static int readStoredData(String commentId, String dataPath, String metaPath){
+
+        File dataFile = new File(dataPath);
+        File metaFile = new File(metaPath);
+
+        if(!dataFile.exists() || !metaFile.exists()){
+            System.out.println("No comment history exists!");
+            return -1;
+        }
 
         BufferedReader metaReader = null;
         BufferedReader dataReader = null;
@@ -191,7 +210,6 @@ public class Anchor {
             System.out.println("Failed to open metadata / data files for reading!");
         }
 
-
         while(metaDataLine != null){
             
             if(metaDataLine.contains(fullCommentId)){
@@ -210,7 +228,7 @@ public class Anchor {
 
         if(!isCommentIdInMetadata){
             System.out.println("Comment ID was not found!");
-            return 1;
+            return -1;
         }
 
         temp = metaDataLine.substring(metaDataLine.indexOf(":") + 1);
@@ -218,7 +236,7 @@ public class Anchor {
 
         if(dataBounds.length != 2){
             System.out.println("More or less than 2 data bounds when parsing metadata file!");
-            return 1;
+            return -1;
         }
 
         System.out.println();
@@ -245,7 +263,7 @@ public class Anchor {
         }
 
         System.out.println(commentData);
-        System.out.println();
+//        System.out.println();
 
         return 1;
     }
@@ -258,6 +276,44 @@ public class Anchor {
                     .map(Path::toString)
                     .collect(Collectors.toSet());
         }
+    }
+
+    public static int initConfigFile(String targetDir, String initDirPathString){
+
+        String configPathString = initDirPathString + "\\config.txt";
+        Path configPath = Path.of(initDirPathString + "\\config.txt");
+
+        try{
+            Files.createFile(configPath);
+        } catch(Exception e){
+            System.out.println("Failed creating configuration file!");
+            System.out.println(e);
+            return -1;
+        }
+
+        try{
+            FileWriter configFileWriter = new FileWriter(configPathString);
+            BufferedWriter configFileBufferedWriter = new BufferedWriter(configFileWriter);
+            configFileBufferedWriter.write("targetDir=" + targetDir);
+            configFileBufferedWriter.close();
+            configFileWriter.close();
+        } catch(Exception e){
+            System.out.println("Error writing data to config file!");
+            return -1;
+        }
+
+//        try{
+//            Set<String> dirs = getDirsInCurrentDir(targetDir);
+//            for(String dir : dirs){
+//                System.out.println(dir);
+//            }
+//        } catch(Exception e){
+//            System.out.println(e);
+//            return -1;
+//        }
+
+        return 1;
+
     }
 
     public static boolean isRootDirInitialized(Set<String> dirs){
@@ -299,19 +355,9 @@ public class Anchor {
         Command command = parseCommand(args[0]);
         String filePath = "";
         Set<String> dirs;
-        String currentDir = System.getProperty("user.dir");
+        String currentDir = System.getProperty("user.dir"); // gets directory command is being run from
         String initDirPathString = currentDir + "\\.anchor";
         Path initDirPath = Paths.get(initDirPathString);
-
-        // TODO : implement command arg limiting!
-//        if((command == Command.SAVE && args.length > 1)){ // only save command will take a path (for now)
-//            System.out.println("Too many arguments for provided command!");
-//            return;
-//        }
-//        else if((command == Command.READ && args.length > 2)){
-//            System.out.println("Too many arguments for provided command!");
-//            return;
-//        }
 
         // Placeholder method of handling commands.
         if(command == Command.HELP){
@@ -331,6 +377,24 @@ public class Anchor {
                 return;
             }
 
+            System.out.println("Please enter the absolute path for the root of the target directory: ");
+
+            Scanner inputScanner = new Scanner(System.in);
+            String targetDirPath = inputScanner.nextLine();
+            File temp = new File(targetDirPath);
+
+            if(!temp.exists()){
+                System.out.println("Provided target directory does not exist!");
+                System.out.println("Initialization cancelled!");
+                return;
+            }
+
+            if(!temp.isDirectory()){
+                System.out.println("Provided path is not a directory!");
+                System.out.println("Initialization cancelled!");
+                return;
+            }
+
             try {
                 Files.createDirectories(initDirPath);
             } catch(Exception e){
@@ -338,10 +402,19 @@ public class Anchor {
                 return;
             }
 
+            if(initConfigFile(targetDirPath, initDirPathString) == -1){
+                return;
+            }
+
             System.out.println("Successfully initialized anchor directory!");
 
         }
         else if (command == Command.SAVE){ // Change later on to scan entire file structure for provided source file type
+
+            if(args.length != 2){
+                System.out.println("Expected 2 arguments!");
+                return;
+            }
 
             try {
                 dirs = getDirsInCurrentDir(currentDir);
@@ -373,6 +446,11 @@ public class Anchor {
         }
         else if (command == Command.READ){
 
+            if(args.length != 2){
+                System.out.println("Expected 2 arguments!");
+                return;
+            }
+
             try {
                 dirs = getDirsInCurrentDir(currentDir);
             } catch (IOException e) {
@@ -389,8 +467,6 @@ public class Anchor {
             readStoredData(args[1], dataPathString, metaPathString);
 
         }
-
-        System.out.println("Program exited successfully!");
 
     }
 }

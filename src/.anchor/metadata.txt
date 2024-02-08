@@ -1,4 +1,0 @@
-[Anchor.TransactionController]:1-4
-[Anchor.TransactionController.NewTransaction]:4-42
-[Anchor.TransactionController.Constructor]:42-47
-[Anchor.TransactionController.PostMapping]:47-49
