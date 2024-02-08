@@ -45,13 +45,14 @@ public class Anchor {
         This method will get anchor data AND remove comment data from source code file!
 
      */
-    private static void extractAnchorComments(String filePath, List<String> fileContent, HashMap<String, String> anchorData){
+    private static void extractAnchorComments(List<String> fileContent, HashMap<String, String> anchorData, HashMap<String, String> anchorOptions){
         if(fileContent.isEmpty()){
             return;
         }
 
         String comment = ""; // not using StringBuilder because it does not automatically append newline characters
         String anchorKey = "";
+        String anchorOption = "";
 
         for(int i = 0; i < fileContent.size(); i++){
 
@@ -59,7 +60,18 @@ public class Anchor {
 
             if(line.contains("[Anchor.")){
                 comment = "";
-                anchorKey = line.substring(line.indexOf("[Anchor."));
+                anchorKey = line.substring(line.indexOf("[Anchor."), line.indexOf("]") + 1);
+                anchorOption = line.substring(line.indexOf("]") + 1).trim();
+
+                if((!anchorOption.startsWith("-") && !anchorOption.isEmpty() ) || anchorOption.length() > 2){
+                    System.out.println("Skipping anchor with id : " + anchorKey + " with invalid option : " + anchorOption);
+                    continue;
+                }
+                else{
+                    System.out.println(anchorKey + "  :  " + anchorOption);
+                    anchorOptions.put(anchorKey, anchorOption);
+                }
+
                 int searchIdx = i + 1;
                 boolean hasAnchorComment = fileContent.get(searchIdx).contains("/*");
 
@@ -84,22 +96,25 @@ public class Anchor {
                     }
 
                     comment += line.trim();
+                    comment += "\n";
 
                     fileContent.remove(searchIdx);
-                    comment += "\n";
                 }
                 anchorData.put(anchorKey, comment.toString());
             }
 
         }
 
+    }
+
+    public static int writeUpdatedFile(String filePath, List<String> fileContent){
         try {
             Files.write(Paths.get(filePath), fileContent); // save file with removed anchor comments
         } catch (IOException e) {
             System.out.println(e);
-            return;
+            return -1;
         }
-
+        return 1;
     }
 
     // get number of newline characters in a string
@@ -519,7 +534,7 @@ public class Anchor {
             System.out.println("Successfully initialized anchor directory!");
 
         }
-        else if (command == Command.SAVE){ // Change later on to scan entire file structure for provided source file type
+        else if (command == Command.SAVE){
 
             if(args.length != 1){
                 System.out.println("Expected no extra arguments for \"save\" command!");
@@ -542,6 +557,7 @@ public class Anchor {
             String dataPathString = initDirPathString + "\\data.txt";
             List<String> fileContent;
             HashMap<String, String> anchorData = new HashMap<String, String>();
+            HashMap<String, String> anchorOptions = new HashMap<String, String>();
 
             for(String targetFile : targetFiles){
 
@@ -551,7 +567,12 @@ public class Anchor {
                     continue;
                 }
 
-                extractAnchorComments(targetFile, fileContent, anchorData);
+                extractAnchorComments(fileContent, anchorData, anchorOptions);
+
+                if(writeUpdatedFile(targetFile, fileContent) != 1){
+                    System.out.println("Failed updating source code file after anchor comments were extracted!");
+                    return;
+                }
 
             }
 
