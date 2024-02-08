@@ -133,7 +133,7 @@ public class Anchor {
     }
 
     // write comment data, and generated metadata, to file
-    public static int writeDataToFile(String dataPath, String metaPath, HashMap<String, String> anchorData){
+    public static int writeDataToFile(String dataPath, String metaPath, HashMap<String, String> anchorData,  HashMap<String, String> anchorOptions){
 
         FileWriter dataFileWriter;
         FileWriter metaFileWriter;
@@ -576,7 +576,7 @@ public class Anchor {
 
             }
 
-            if(writeDataToFile(dataPathString, metaPathString, anchorData) == -1){
+            if(writeDataToFile(dataPathString, metaPathString, anchorData, anchorOptions) == -1){
                 System.out.println("Failed writing data to file!");
                 return;
             }
