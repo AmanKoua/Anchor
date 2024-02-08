@@ -33,4 +33,5 @@ bin/
 .idea
 .git
 .anchor
+.class
 Anchor.iml
