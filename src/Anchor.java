@@ -18,28 +18,27 @@ enum Command{ // Placeholder for more advanced command handling
 
 public class Anchor {
 
-    private static List<String> fileLines;
-    private static HashMap<String, String> anchorTagComments;
     private static String anchorDirPath = "";
 
     // Reads all file content, from specified filePath, into fileLines list
-    private static int getFileContent(String filePath){
+    private static List<String> getFileContent(String filePath){
 
+        List<String> fileContent;
         File file = new File(filePath);
 
         if(!file.exists()){
             System.out.println("Provided file path does not exist!");
-            return -1;
+            return null;
         }
 
         try{
-            fileLines = Files.readAllLines(Paths.get(filePath));
+            fileContent = Files.readAllLines(Paths.get(filePath));
         }catch (Exception e){
             System.out.println(e);
-            return -1; // failure
+            return null; // failure
         }
 
-        return 1; // success
+        return fileContent; // success
 
     }
 
@@ -54,55 +53,56 @@ public class Anchor {
         This method will get anchor data AND remove comment data from source code file!
 
      */
-    private static void getAnchorData(String filePath){
-        if(fileLines.isEmpty()){
+    private static void extractAnchorComments(String filePath, List<String> fileContent, HashMap<String, String> anchorData){
+        if(fileContent.isEmpty()){
             return;
         }
 
-        anchorTagComments = new HashMap<String, String>();
         String comment = ""; // not using StringBuilder because it does not automatically append newline characters
         String anchorKey = "";
 
-        for(int i = 0; i < fileLines.size(); i++){
+        for(int i = 0; i < fileContent.size(); i++){
 
-            String line = fileLines.get(i);
+            String line = fileContent.get(i);
 
             if(line.contains("[Anchor.")){
                 comment = "";
                 anchorKey = line.substring(line.indexOf("[Anchor."));
                 int searchIdx = i + 1;
-                boolean hasAnchorComment = fileLines.get(searchIdx).contains("/*");
+                boolean hasAnchorComment = fileContent.get(searchIdx).contains("/*");
 
                 if(!hasAnchorComment){ // skip processing if no anchor comment is present
                     continue;
                 }
 
-                while(searchIdx < fileLines.size()){
+                while(searchIdx < fileContent.size()){
 
-                    line = fileLines.get(searchIdx);
+                    // file lines are removed as a means to iterate through the file lines.
+
+                    line = fileContent.get(searchIdx);
 
                     if(line.contains("*/")){
-                        fileLines.remove(searchIdx);
+                        fileContent.remove(searchIdx);
                         break;
                     }
 
                     if(line.contains("/*")){
-                        fileLines.remove(searchIdx);
+                        fileContent.remove(searchIdx);
                         continue;
                     }
 
                     comment += line.trim();
 
-                    fileLines.remove(searchIdx);
+                    fileContent.remove(searchIdx);
                     comment += "\n";
                 }
-                anchorTagComments.put(anchorKey, comment.toString());
+                anchorData.put(anchorKey, comment.toString());
             }
 
         }
 
         try {
-            Files.write(Paths.get(filePath), fileLines);
+            Files.write(Paths.get(filePath), fileContent); // save file with removed anchor comments
         } catch (IOException e) {
             System.out.println(e);
             return;
@@ -126,7 +126,7 @@ public class Anchor {
     }
 
     // write comment data, and generated metadata, to file
-    public static int writeDataToFile(String dataPath, String metaPath){
+    public static int writeDataToFile(String dataPath, String metaPath, HashMap<String, String> anchorData){
 
         FileWriter dataFileWriter;
         FileWriter metaFileWriter;
@@ -147,7 +147,7 @@ public class Anchor {
 
         try{
 
-            for (Map.Entry<String, String> entry : anchorTagComments.entrySet()) {
+            for (Map.Entry<String, String> entry : anchorData.entrySet()) {
 
                 // write metadata for efficient data traversal upon reading comments
                 metaBufferedWriter.write(entry.getKey());
@@ -294,10 +294,6 @@ public class Anchor {
         targetExtension = configData.get("targetExtension");
 
         getTargetFilePathsHelper(result, targetDirPath, targetExtension);
-
-        for(String path: result){
-            System.out.println(path);
-        }
 
         return result;
 
@@ -533,10 +529,8 @@ public class Anchor {
         }
         else if (command == Command.SAVE){ // Change later on to scan entire file structure for provided source file type
 
-            getTargetFilePaths(initDirPathString);
-
-            if(args.length != 2){
-                System.out.println("Expected 2 arguments!");
+            if(args.length != 1){
+                System.out.println("Expected no extra arguments for \"save\" command!");
                 return;
             }
 
@@ -551,16 +545,25 @@ public class Anchor {
                 return;
             }
 
+            List<String> targetFiles = getTargetFilePaths(initDirPathString);
             String metaPathString = initDirPathString + "\\metadata.txt";
             String dataPathString = initDirPathString + "\\data.txt";
+            List<String> fileContent;
+            HashMap<String, String> anchorData = new HashMap<String, String>();
 
-            if(getFileContent(args[1]) != 1){ // 2nd command line arg MUST be a path (for now)
-                return;
+            for(String targetFile : targetFiles){
+
+                fileContent = getFileContent(targetFile);
+
+                if(fileContent == null || fileContent.isEmpty()){
+                    continue;
+                }
+
+                extractAnchorComments(targetFile, fileContent, anchorData);
+
             }
 
-            getAnchorData(args[1]);
-
-            if(writeDataToFile(dataPathString, metaPathString) == -1){
+            if(writeDataToFile(dataPathString, metaPathString, anchorData) == -1){
                 System.out.println("Failed writing data to file!");
                 return;
             }
