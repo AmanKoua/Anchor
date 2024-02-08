@@ -32,4 +32,5 @@ bin/
 /out/
 .idea
 .git
+.anchor
 Anchor.iml
