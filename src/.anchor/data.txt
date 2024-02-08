@@ -1,9 +1,0 @@
-[Anchor.TransactionController]
-This is my transaction controller class!
-[Anchor.TransactionController.Constructor]
-This is my transaction constructor!
-I'm trying multiple line here!
-"Let's hope the darn thing works!".
-I would like to try this for a comment of substansial and nonTrivial size. This is in order to test how lines are handled by the software when they are sufficiently large!
-[Anchor.TransactionController.PostMapping]
-This is my transaction postMapping!

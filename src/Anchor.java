@@ -1,24 +1,16 @@
-/*
-Data.txt path : "C:\Personal Use\Programming\Anchor\src\data.txt"
-Test file path : "C:\Personal Use\Programming\Anchor test files\WheelDeal\Transaction\TransactionController.java"
-*/
-
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.sql.SQLOutput;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-enum Command{ // Placeholder for more advanced command handling
+enum Command{
     INIT, SAVE, READ, HELP, INVALID
 }
 
 public class Anchor {
-
-    private static String anchorDirPath = "";
 
     // Reads all file content, from specified filePath, into fileLines list
     private static List<String> getFileContent(String filePath){
