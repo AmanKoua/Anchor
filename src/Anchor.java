@@ -268,13 +268,91 @@ public class Anchor {
         return 1;
     }
 
-//    private static String[] getAllPaths
+    private static List<String> getTargetFilePaths(String initDirPath){
+
+        ArrayList<String> result = new ArrayList<String>();
+        HashMap<String, String> configData = getConfigData(initDirPath);
+        String targetDirPath = "";
+        String targetExtension = "";
+
+        if(configData == null){
+            System.out.println("Config data is null!");
+            return null;
+        }
+
+        if(!configData.containsKey("targetDir")){
+            System.out.println("Configuration does not contain targetDir key!");
+            return null;
+        }
+
+        if(!configData.containsKey("targetExtension")){
+            System.out.println("Configuration does not contain targetExtension key!");
+            return null;
+        }
+
+        targetDirPath = configData.get("targetDir");
+        targetExtension = configData.get("targetExtension");
+
+        getTargetFilePathsHelper(result, targetDirPath, targetExtension);
+
+        for(String path: result){
+            System.out.println(path);
+        }
+
+        return result;
+
+    }
+
+    public static void getTargetFilePathsHelper(ArrayList<String> result, String path, String targetExtension){
+
+        Set<String> dirs;
+        Set<String> files;
+
+        try{
+            dirs = getDirPathsInCurrentDir(path);
+            files = getFilesPathsInCurrentDir(path);
+
+            for(String file : files){
+                if(file.endsWith(targetExtension)){
+                    result.add(file);
+                }
+            }
+
+            for(String dir: dirs){
+                getTargetFilePathsHelper(result, dir, targetExtension);
+            }
+
+        } catch(Exception e){
+            System.out.println(e);
+        }
+
+    }
 
     public static Set<String> getDirsInCurrentDir(String dir) throws IOException {
         try (Stream<Path> stream = Files.list(Paths.get(dir))) {
             return stream
                     .filter(file -> Files.isDirectory(file))
                     .map(Path::getFileName)
+                    .map(Path::toString)
+                    .collect(Collectors.toSet());
+        }
+    }
+
+    public static Set<String> getDirPathsInCurrentDir(String dir) throws IOException {
+        try (Stream<Path> stream = Files.list(Paths.get(dir))) {
+            return stream
+                    .filter(file -> Files.isDirectory(file))
+                    .map(Path::toAbsolutePath)
+                    .map(Path::toString)
+                    .collect(Collectors.toSet());
+        }
+    }
+
+    public static Set<String> getFilesPathsInCurrentDir(String dir) throws IOException {
+        try (Stream<Path> stream = Files.list(Paths.get(dir))) {
+            return stream
+                    .filter(file -> !Files.isDirectory(file))
+                    .map(Path::toAbsolutePath)
                     .map(Path::toString)
                     .collect(Collectors.toSet());
         }
@@ -306,27 +384,18 @@ public class Anchor {
             return -1;
         }
 
-//        try{
-//            Set<String> dirs = getDirsInCurrentDir(targetDir);
-//            for(String dir : dirs){
-//                System.out.println(dir);
-//            }
-//        } catch(Exception e){
-//            System.out.println(e);
-//            return -1;
-//        }
-
         return 1;
 
     }
 
-    public static String getTargetPath(String initDirPath){
+    public static HashMap<String, String> getConfigData(String initDirPath){
 
         File temp = new File(initDirPath);
+        HashMap<String, String> result = new HashMap<String, String>();
 
         if(!temp.exists() || !temp.isDirectory()){
-            System.out.println("Cannot get target path from non existing init dir!");
-            return "";
+            System.out.println("Cannot get config data because init dir does not exist!");
+            return null;
         }
 
         try{
@@ -337,15 +406,19 @@ public class Anchor {
             while(configString != null){
                 configString = configBufferedReader.readLine();
 
-                if(configString.contains("targetDir=")){
+                if(configString == null){
+                    break;
+                }
+
+                if(configString.contains("=")){
                     String[] splitResult = configString.split("=");
 
                     if(splitResult.length != 2){
-                        System.out.println("Error parsing target dir in config file!");
-                        return "";
+                        System.out.println("Error parsing line in config file!");
+                        return null;
                     }
                     else{
-                        return splitResult[1];
+                        result.put(splitResult[0], splitResult[1]);
                     }
 
                 }
@@ -353,13 +426,13 @@ public class Anchor {
             }
 
         } catch(Exception e){
-            System.out.println("Error reading target path from config file!");
+            System.out.println("Error reading config data from config file!");
             System.out.println(e);
-            return "";
+            return null;
         }
 
-        System.out.println("Target directory not found!");
-        return "";
+        return result;
+
     }
 
     public static boolean isRootDirInitialized(Set<String> dirs){
@@ -459,6 +532,8 @@ public class Anchor {
 
         }
         else if (command == Command.SAVE){ // Change later on to scan entire file structure for provided source file type
+
+            getTargetFilePaths(initDirPathString);
 
             if(args.length != 2){
                 System.out.println("Expected 2 arguments!");
