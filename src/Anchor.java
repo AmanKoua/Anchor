@@ -63,6 +63,8 @@ public class Anchor {
                 anchorKey = line.substring(line.indexOf("[Anchor."), line.indexOf("]") + 1);
                 anchorOption = line.substring(line.indexOf("]") + 1).trim();
 
+                fileContent.set(i, "// " + anchorKey); // remove option flags from comments if present
+
                 if((!anchorOption.startsWith("-") && !anchorOption.isEmpty() ) || anchorOption.length() > 2){
                     System.out.println("Skipping anchor with id : " + anchorKey + " with invalid option : " + anchorOption);
                     continue;
@@ -153,13 +155,66 @@ public class Anchor {
         String commentPathString;
         String commentOption;
         Set<String> anchorCommentIds = anchorData.keySet();
+        Set<String> anchorOptionsCommentsIdx = anchorOptions.keySet();
 
+        // handle comments which have flags but no data
+        for(String commentId : anchorOptionsCommentsIdx){
+
+            if(anchorData.get(commentId) != null){
+                continue;
+            }
+
+            commentPathString = dataDirPathString + "\\" + commentId + ".txt";
+            commentOption = anchorOptions.get(commentId);
+            commentOption = commentOption.trim();
+
+            if(commentOption == null || commentOption.isEmpty()){
+                continue;
+            }
+
+            commentOption = commentOption.substring(1);
+
+            if(commentOption.equals("a")){
+                continue;
+            }
+            else if(commentOption.equals("u")){ // an update without content means that the user wants to update the comment data to nothing (delete).
+                try{
+                    Files.deleteIfExists(Path.of(commentPathString));
+                } catch(Exception e){
+                    System.out.println("Error deleting data file!");
+                    return -1;
+                }
+            }
+            else if(commentOption.equals("r")){
+                try{
+                    Files.deleteIfExists(Path.of(commentPathString));
+                } catch(Exception e){
+                    System.out.println("Error deleting data file!");
+                    return -1;
+                }
+            }
+            else{
+                System.out.println("Invalid option provided for : " + commentId);
+                continue;
+            }
+
+        }
+
+        // handle all commentIds
         for(String commentId : anchorCommentIds){
 
             isSkipIteration = false;
             commentPathString = dataDirPathString + "\\" + commentId + ".txt";
             commentOption = anchorOptions.get(commentId);
 
+            if(commentOption != null){
+                commentOption = commentOption.trim();
+                if(commentOption.isEmpty()){
+                    commentOption = null;
+                }
+            }
+
+            // handle comment flags
             if(commentOption != null){
 
                 commentOption = commentOption.substring(1);
