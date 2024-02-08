@@ -68,7 +68,7 @@ public class Anchor {
                     continue;
                 }
                 else{
-                    System.out.println(anchorKey + "  :  " + anchorOption);
+//                    System.out.println(anchorKey + "  :  " + anchorOption);
                     anchorOptions.put(anchorKey, anchorOption);
                 }
 
@@ -133,144 +133,80 @@ public class Anchor {
     }
 
     // write comment data, and generated metadata, to file
-    public static int writeDataToFile(String dataPath, String metaPath, HashMap<String, String> anchorData,  HashMap<String, String> anchorOptions){
+    public static int writeDataToFile(String initDirPathString, HashMap<String, String> anchorData, HashMap<String, String> anchorOptions){
 
-        FileWriter dataFileWriter;
-        FileWriter metaFileWriter;
-        BufferedWriter dataBufferedWriter;
-        BufferedWriter metaBufferedWriter;
-        int lineCount = 0;
+        final String dataDirPathString = initDirPathString + "\\data";
 
-        try{
-            dataFileWriter = new FileWriter(dataPath, true);
-            dataBufferedWriter = new BufferedWriter(dataFileWriter);
-            metaFileWriter = new FileWriter(metaPath, true);
-            metaBufferedWriter = new BufferedWriter(metaFileWriter);
-        }catch(IOException e){
-            System.out.println("Failed initializing data / metadata files!");
-            System.out.println(e);
-            return -1;
+        if(!Files.exists(Path.of(dataDirPathString))){
+            try{
+                Files.createDirectory(Path.of(dataDirPathString));
+            } catch(Exception e){
+                System.out.println("Failed to create data directory!");
+                System.out.println(e);
+                return -1;
+            }
         }
 
-        try{
+        FileWriter dataFileWriter;
+        BufferedWriter dataBufferedWriter;
+        String commentPathString;
+        Set<String> anchorCommentIds = anchorData.keySet();
 
-            for (Map.Entry<String, String> entry : anchorData.entrySet()) {
+        for(String commentId : anchorCommentIds){
 
-                // write metadata for efficient data traversal upon reading comments
-                metaBufferedWriter.write(entry.getKey());
-                metaBufferedWriter.write(":");
-                metaBufferedWriter.write(String.valueOf(lineCount + 1));
-                metaBufferedWriter.write("-");
-                metaBufferedWriter.write(String.valueOf(getNewlineCount(entry.getValue()) + (lineCount + 2)));
-                metaBufferedWriter.newLine();
+            commentPathString = dataDirPathString + "\\" + commentId + ".txt";
 
-                lineCount = getNewlineCount(entry.getValue()) + (lineCount + 1);
-
-                // Write data to data file
-                dataBufferedWriter.write(entry.getKey());
-                dataBufferedWriter.newLine();
-                dataBufferedWriter.write(entry.getValue());
+            try{
+                Files.createFile(Path.of(commentPathString));
+                dataFileWriter = new FileWriter(commentPathString, true);
+                dataBufferedWriter = new BufferedWriter(dataFileWriter);
+            }catch(IOException e){
+                System.out.println("Failed initializing data file(s)!");
+                System.out.println(e);
+                return -1;
             }
 
-            dataBufferedWriter.close();
-            metaBufferedWriter.close();
-            // Next 2 lines need to be tested for functionality!
-            dataFileWriter.close();
-            metaFileWriter.close();
+            try{
+                dataBufferedWriter.write(anchorData.get(commentId));
+                dataBufferedWriter.close();
+                dataFileWriter.close();
+            } catch(Exception e){
+                System.out.println("Failed writing comment data to file!");
+                System.out.println(e);
+                return -1;
+            }
 
-        }catch(Exception e){
-            System.out.println(e);
-            return -1;
         }
 
         return 1;
 
     }
 
-    private static int readStoredData(String commentId, String dataPath, String metaPath){
+    private static int readStoredData(String commentId, String initDirPathString){
 
-        File dataFile = new File(dataPath);
-        File metaFile = new File(metaPath);
+        final String commentPathString = initDirPathString + "\\data\\" + "[Anchor." + commentId + "].txt";
 
-        if(!dataFile.exists() || !metaFile.exists()){
-            System.out.println("No comment history exists!");
+        if(!Files.exists(Path.of(commentPathString))){
+            System.out.println("No comment data file exists!");
             return -1;
         }
-
-        BufferedReader metaReader = null;
-        BufferedReader dataReader = null;
-        String temp;
-        String commentData = "";
-        String fullCommentId = "[Anchor." + commentId + "]";
-        String metaDataLine = ""; // init
-        String commentDataLine = ""; // init
-        String[] dataBounds;
-        boolean isCommentIdInMetadata = false;
-        int lineCount = 0;
-
-//        System.out.println("full comment id: " + fullCommentId);
 
         try{
-            metaReader = new BufferedReader(new FileReader(metaPath));
-            dataReader = new BufferedReader(new FileReader(dataPath));
-        } catch(Exception e){
-            System.out.println("Failed to open metadata / data files for reading!");
-        }
+            FileReader commentFileReader = new FileReader(commentPathString);
+            BufferedReader commentBufferedReader = new BufferedReader(commentFileReader);
 
-        while(metaDataLine != null){
-            
-            if(metaDataLine.contains(fullCommentId)){
-                isCommentIdInMetadata = true;
-                break;
+            String commentData = commentBufferedReader.readLine();
+
+            while(commentData != null){
+                System.out.println(commentData);
+                commentData = commentBufferedReader.readLine();
             }
 
-            try{
-                metaDataLine = metaReader.readLine();
-            }
-            catch(Exception e){
-                System.out.println(e);
-            }
 
-        }
-
-        if(!isCommentIdInMetadata){
-            System.out.println("Comment ID was not found!");
+        } catch (Exception e){
+            System.out.println("Error reading from comment data file!");
             return -1;
         }
-
-        temp = metaDataLine.substring(metaDataLine.indexOf(":") + 1);
-        dataBounds = temp.split("-");
-
-        if(dataBounds.length != 2){
-            System.out.println("More or less than 2 data bounds when parsing metadata file!");
-            return -1;
-        }
-
-        System.out.println();
-
-        while(commentDataLine != null){
-
-            if(lineCount >= Integer.parseInt(dataBounds[1].trim())){
-                break;
-            }
-
-            if(lineCount > Integer.parseInt(dataBounds[0].trim())){
-                commentData += commentDataLine + "\n";
-            }
-
-            try{
-                commentDataLine = dataReader.readLine();
-            }
-            catch(Exception e){
-                System.out.println(e);
-            }
-
-            lineCount++;
-
-        }
-
-        System.out.println(commentData);
-//        System.out.println();
 
         return 1;
     }
@@ -576,7 +512,7 @@ public class Anchor {
 
             }
 
-            if(writeDataToFile(dataPathString, metaPathString, anchorData, anchorOptions) == -1){
+            if(writeDataToFile(initDirPathString, anchorData, anchorOptions) == -1){
                 System.out.println("Failed writing data to file!");
                 return;
             }
@@ -602,9 +538,7 @@ public class Anchor {
                 return;
             }
 
-            String metaPathString = initDirPathString + "\\metadata.txt";
-            String dataPathString = initDirPathString + "\\data.txt";
-            readStoredData(args[1], dataPathString, metaPathString);
+            readStoredData(args[1], initDirPathString);
 
         }
         else{
