@@ -268,6 +268,8 @@ public class Anchor {
         return 1;
     }
 
+//    private static String[] getAllPaths
+
     public static Set<String> getDirsInCurrentDir(String dir) throws IOException {
         try (Stream<Path> stream = Files.list(Paths.get(dir))) {
             return stream
@@ -278,7 +280,7 @@ public class Anchor {
         }
     }
 
-    public static int initConfigFile(String targetDir, String initDirPathString){
+    public static int initConfigFile(String targetDir, String initDirPathString, String targetExtension){
 
         String configPathString = initDirPathString + "\\config.txt";
         Path configPath = Path.of(initDirPathString + "\\config.txt");
@@ -295,6 +297,8 @@ public class Anchor {
             FileWriter configFileWriter = new FileWriter(configPathString);
             BufferedWriter configFileBufferedWriter = new BufferedWriter(configFileWriter);
             configFileBufferedWriter.write("targetDir=" + targetDir);
+            configFileBufferedWriter.newLine();
+            configFileBufferedWriter.write("targetExtension=" + targetExtension);
             configFileBufferedWriter.close();
             configFileWriter.close();
         } catch(Exception e){
@@ -314,6 +318,48 @@ public class Anchor {
 
         return 1;
 
+    }
+
+    public static String getTargetPath(String initDirPath){
+
+        File temp = new File(initDirPath);
+
+        if(!temp.exists() || !temp.isDirectory()){
+            System.out.println("Cannot get target path from non existing init dir!");
+            return "";
+        }
+
+        try{
+            FileReader configReader = new FileReader(initDirPath + "\\config.txt");
+            BufferedReader configBufferedReader = new BufferedReader(configReader);
+            String configString = "";
+
+            while(configString != null){
+                configString = configBufferedReader.readLine();
+
+                if(configString.contains("targetDir=")){
+                    String[] splitResult = configString.split("=");
+
+                    if(splitResult.length != 2){
+                        System.out.println("Error parsing target dir in config file!");
+                        return "";
+                    }
+                    else{
+                        return splitResult[1];
+                    }
+
+                }
+
+            }
+
+        } catch(Exception e){
+            System.out.println("Error reading target path from config file!");
+            System.out.println(e);
+            return "";
+        }
+
+        System.out.println("Target directory not found!");
+        return "";
     }
 
     public static boolean isRootDirInitialized(Set<String> dirs){
@@ -383,6 +429,9 @@ public class Anchor {
             String targetDirPath = inputScanner.nextLine();
             File temp = new File(targetDirPath);
 
+            System.out.println("Please enter the file extension of the source code file(s) to be tracked by anchor: ");
+            String targetExtension = inputScanner.nextLine();
+
             if(!temp.exists()){
                 System.out.println("Provided target directory does not exist!");
                 System.out.println("Initialization cancelled!");
@@ -402,7 +451,7 @@ public class Anchor {
                 return;
             }
 
-            if(initConfigFile(targetDirPath, initDirPathString) == -1){
+            if(initConfigFile(targetDirPath, initDirPathString, targetExtension) == -1){
                 return;
             }
 
@@ -466,6 +515,9 @@ public class Anchor {
             String dataPathString = initDirPathString + "\\data.txt";
             readStoredData(args[1], dataPathString, metaPathString);
 
+        }
+        else{
+            System.out.println("Invalid command!");
         }
 
     }

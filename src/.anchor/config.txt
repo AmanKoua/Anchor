@@ -1,1 +1,2 @@
 targetDir=C:\Personal Use\Programming\Anchor test files\WheelDeal
+targetExtension=.java
