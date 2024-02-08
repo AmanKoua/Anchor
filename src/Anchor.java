@@ -147,17 +147,61 @@ public class Anchor {
             }
         }
 
+        boolean isSkipIteration = false;
         FileWriter dataFileWriter;
         BufferedWriter dataBufferedWriter;
         String commentPathString;
+        String commentOption;
         Set<String> anchorCommentIds = anchorData.keySet();
 
         for(String commentId : anchorCommentIds){
 
+            isSkipIteration = false;
             commentPathString = dataDirPathString + "\\" + commentId + ".txt";
+            commentOption = anchorOptions.get(commentId);
+
+            if(commentOption != null){
+
+                commentOption = commentOption.substring(1);
+
+                switch(commentOption){
+                    case "u": // update
+                        try{
+                            Files.deleteIfExists(Path.of(commentPathString));
+                        } catch(Exception e){
+                            System.out.println("Error deleting data file!");
+                            return -1;
+                        }
+                        break;
+                    case "a": // append
+                        // no action required to append to file
+                        break;
+                    case "r": // remove
+                        try{
+                            Files.deleteIfExists(Path.of(commentPathString));
+                            isSkipIteration = true;
+                        } catch(Exception e){
+                            System.out.println("Error deleting data file!");
+                            return -1;
+                        }
+                        break;
+                    default:
+                        System.out.println("Invalid option provided for : " + commentId);
+                        isSkipIteration = true;
+                }
+
+                if(isSkipIteration){
+                    continue;
+                }
+
+            }
 
             try{
-                Files.createFile(Path.of(commentPathString));
+
+                if(!Files.exists(Path.of(commentPathString))){
+                    Files.createFile(Path.of(commentPathString));
+                }
+
                 dataFileWriter = new FileWriter(commentPathString, true);
                 dataBufferedWriter = new BufferedWriter(dataFileWriter);
             }catch(IOException e){
